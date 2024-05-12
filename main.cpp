@@ -30,7 +30,7 @@ vector<vector<int>> getInterruptCounts(const vector<int>& monitoredCPUs) {
 
     string line;
     while (getline(procInterrupts, line)) {
-        cout << "Read line: " << line << endl; // Debug statement
+        cout << "Read line: " << line << endl;
         stringstream ss(line);
         string cpuStr;
         ss >> cpuStr;
@@ -39,7 +39,7 @@ vector<vector<int>> getInterruptCounts(const vector<int>& monitoredCPUs) {
             if (find(monitoredCPUs.begin(), monitoredCPUs.end(), cpu) != monitoredCPUs.end()) {
                 vector<int> counts;
                 int count;
-                ss.ignore(numeric_limits<streamsize>::max(), ':'); // Skip CPU label
+                ss.ignore(numeric_limits<streamsize>::max(), ':');
                 while (ss >> count) {
                     counts.push_back(count);
                 }
@@ -61,13 +61,13 @@ void monitorInterrupts(const vector<int>& monitoredCPUs, int programCPU) {
     while (true) {
         vector<vector<int>> interruptCounts = getInterruptCounts(monitoredCPUs);
 
-        cout << "Size of interruptCounts: " << interruptCounts.size() << endl; // Debug statement
+        cout << "Size of interruptCounts: " << interruptCounts.size() << endl; 
 
         if (!interruptCounts.empty()) {
             cout << "Interrupt activity:" << endl;
             for (size_t i = 0; i < monitoredCPUs.size(); ++i) {
                 cout << " CPU" << monitoredCPUs[i] << ": ";
-                cout << "Size of inner vector: " << interruptCounts[i].size() << endl; // Debug statement
+                cout << "Size of inner vector: " << interruptCounts[i].size() << endl;
                 for (int count : interruptCounts[i]) {
                     cout << count << " ";
                 }
@@ -86,7 +86,6 @@ void monitorInterrupts(const vector<int>& monitoredCPUs, int programCPU) {
 
 
 int main() {
-    // CPUs to monitor and the CPU where the program runs
     vector<int> monitoredCPUs = {0, 1};
     int programCPU = 2;
 
@@ -97,7 +96,6 @@ int main() {
     cout << endl;
     cout << "Program CPU: " << programCPU << endl;
 
-    // Start interrupt monitoring
     monitorInterrupts(monitoredCPUs, programCPU);
 
     return 0;
