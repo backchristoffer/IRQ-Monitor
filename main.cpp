@@ -21,7 +21,7 @@ void parseInterrupts() {
         stringstream ss(line);
         string cpu;
         ss >> cpu;
-        cout << "CPU " << cpu << ":";
+        cout << "IRQ " << cpu << ":";
 
         int interruptCount;
         while (ss >> interruptCount) {
