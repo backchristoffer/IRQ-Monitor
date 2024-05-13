@@ -1,102 +1,75 @@
 #include <iostream>
-#include <vector>
 #include <fstream>
 #include <sstream>
-#include <algorithm>
-#include <cstring>
-#include <pthread.h>
-#include <unistd.h>  
-#include <limits>
-#include <ios>
-using namespace std;
+#include <string>
+#include <vector>
+#include <unordered_map>
+#include <unistd.h>
+#include <stdlib.h>
+#include <getopt.h>
+#include <sched.h>
 
-void setCPUAffinity(int cpu) {
+std::unordered_map<std::string, std::vector<std::string>> parse_interrupts() {
+    std::ifstream file("/proc/interrupts");
+    std::unordered_map<std::string, std::vector<std::string>> interrupts;
+
+    if (file.is_open()) {
+        std::string line;
+        while (std::getline(file, line)) {
+            if (line.find(':') != std::string::npos) {
+                std::istringstream iss(line);
+                std::string irq;
+                iss >> irq;
+
+                std::string devices;
+                while (iss >> devices) {
+                    interrupts[irq].push_back(devices);
+                }
+            }
+        }
+        file.close();
+    }
+    return interrupts;
+}
+
+void print_interrupts(const std::unordered_map<std::string, std::vector<std::string>>& interrupts) {
+    std::cout << "IRQ\tDevice" << std::endl;
+    for (const auto& entry : interrupts) {
+        std::cout << entry.first << "\t";
+        for (const auto& device : entry.second) {
+            std::cout << device << " ";
+        }
+        std::cout << std::endl;
+    }
+}
+
+int main(int argc, char* argv[]) {
+    int cpu_affinity = 0;
+
+    int opt;
+    while ((opt = getopt(argc, argv, "c:")) != -1) {
+        switch (opt) {
+            case 'c':
+                cpu_affinity = std::atoi(optarg);
+                break;
+            default:
+                std::cerr << "Usage: " << argv[0] << " [-c CPU_AFFINITY]" << std::endl;
+                exit(EXIT_FAILURE);
+        }
+    }
+
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
-    CPU_SET(cpu, &cpuset);
-    if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset) != 0) {
-        cerr << "Error: Failed to set CPU affinity" << endl;
+    CPU_SET(cpu_affinity, &cpuset);
+    if (sched_setaffinity(0, sizeof(cpu_set_t), &cpuset) == -1) {
+        perror("sched_setaffinity");
+        exit(EXIT_FAILURE);
     }
-}
-
-vector<vector<int>> getInterruptCounts(const vector<int>& monitoredCPUs) {
-    vector<vector<int>> interruptCounts;
-
-    ifstream procInterrupts("/proc/interrupts");
-    if (!procInterrupts.is_open()) {
-        cerr << "Error: Failed to open /proc/interrupts" << endl;
-        return interruptCounts;
-    }
-
-    string line;
-    while (getline(procInterrupts, line)) {
-        cout << "Read line: " << line << endl;
-        stringstream ss(line);
-        string cpuStr;
-        ss >> cpuStr;
-        if (cpuStr.find("CPU") == 0) {
-            int cpu = stoi(cpuStr.substr(3));
-            if (find(monitoredCPUs.begin(), monitoredCPUs.end(), cpu) != monitoredCPUs.end()) {
-                vector<int> counts;
-                int count;
-                ss.ignore(numeric_limits<streamsize>::max(), ':');
-                while (ss >> count) {
-                    counts.push_back(count);
-                }
-                interruptCounts.push_back(counts);
-                cout << "Pushed interrupt counts for CPU" << cpu << " with size: " << counts.size() << endl; // Debug statement
-            }
-        }
-    }
-
-    procInterrupts.close();
-
-    return interruptCounts;
-}
-
-
-void monitorInterrupts(const vector<int>& monitoredCPUs, int programCPU) {
-    setCPUAffinity(programCPU);
 
     while (true) {
-        vector<vector<int>> interruptCounts = getInterruptCounts(monitoredCPUs);
-
-        cout << "Size of interruptCounts: " << interruptCounts.size() << endl; 
-
-        if (!interruptCounts.empty()) {
-            cout << "Interrupt activity:" << endl;
-            for (size_t i = 0; i < monitoredCPUs.size(); ++i) {
-                cout << " CPU" << monitoredCPUs[i] << ": ";
-                cout << "Size of inner vector: " << interruptCounts[i].size() << endl;
-                for (int count : interruptCounts[i]) {
-                    cout << count << " ";
-                }
-                cout << " |";
-            }
-            cout << endl;
-        } else {
-            cerr << "Error: No interrupt counts retrieved" << endl;
-        }
-
-        cout << "End of iteration" << endl;
-
-        sleep(1);
+        auto interrupts = parse_interrupts();
+        print_interrupts(interrupts);
+        usleep(100000); 
     }
-}
-
-
-int main() {
-    vector<int> monitoredCPUs = {0, 1};
-    int programCPU = 2;
-
-    cout << "Monitored CPUs: ";
-    for (int cpu : monitoredCPUs) {
-        cout << cpu << " ";
-    }
-    cout << endl;
-    cout << "Program CPU: " << programCPU << endl;
-
-    monitorInterrupts(monitoredCPUs, programCPU);
-
     return 0;
 }

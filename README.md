@@ -1,6 +1,6 @@
 # Playing with irq monitoring in real-time (ms)
-## How to run
+## How to run the program on CPU1 but still monitoring all available CPUs
 ```
-./interrupt_monitor
+./irqmon --cpu-affinity 1
 ```
-g++ -o interrupt_monitor interrupt_monitor.cpp -lpthread
+g++ -o irqmon main.cpp -lpthread -std=c++11 -Wall

@@ -3,7 +3,7 @@ CXXFLAGS = -std=c++11 -Wall -pthread
 
 SRCS = main.cpp
 OBJS = $(SRCS:.cpp=.o)
-TARGET = interrupt_monitor
+TARGET = irqmon
 
 .PHONY: all clean
 
