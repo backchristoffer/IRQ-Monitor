@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <sched.h>
+#include <cstring>
 
 std::unordered_map<std::string, std::vector<std::string>> parse_interrupts(int cpu) {
     std::ifstream file("/proc/interrupts");
@@ -52,26 +53,35 @@ void print_interrupts(const std::unordered_map<std::string, std::vector<std::str
     }
 }
 
+static struct option long_options[] = {
+    {"cpu-mon", required_argument, nullptr, 'm'},
+    {nullptr, 0, nullptr, 0}
+};
+
 int main(int argc, char* argv[]) {
     int cpu_affinity = 0;
-    int cpu_mon = -1;
+    int cpu_mon = -1; // Default value indicating no specific CPU monitoring
 
+    // Parse command-line arguments
     int opt;
-    while ((opt = getopt(argc, argv, "c:")) != -1) {
+    while ((opt = getopt_long(argc, argv, "c:", long_options, nullptr)) != -1) {
         switch (opt) {
             case 'c':
+                cpu_affinity = std::atoi(optarg);
+                break;
+            case 'm':
                 cpu_mon = std::atoi(optarg);
                 break;
             default:
-                std::cerr << "Usage: " << argv[0] << " [-c CPU_AFFINITY]" << std::endl;
+                std::cerr << "Usage: " << argv[0] << " [-c CPU_AFFINITY] [--cpu-mon CPU_TO_MONITOR]" << std::endl;
                 exit(EXIT_FAILURE);
         }
     }
 
     if (cpu_mon < 0) {
-        cpu_affinity = sched_getcpu();
-    } else {
-        cpu_affinity = cpu_mon;
+        // If no specific CPU is provided for monitoring, set the CPU affinity
+        // to the specified CPU affinity for the program
+        cpu_mon = cpu_affinity;
     }
 
     cpu_set_t cpuset;
@@ -83,7 +93,7 @@ int main(int argc, char* argv[]) {
     }
 
     while (true) {
-        auto interrupts = parse_interrupts(cpu_affinity);
+        auto interrupts = parse_interrupts(cpu_mon);
         print_interrupts(interrupts);
         usleep(100000);
     }
